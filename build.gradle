@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '2.0.4'
+}
+
+group 'com.bishopfox'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+mainClassName = 'com.bishopfox.rmiscout.RMIScout'
+
+repositories {
+    mavenCentral()
+    maven { url "https://jitpack.io" }
+    maven { url "https://repo.spring.io/plugins-release/" }
+}
+
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile group: 'org.javassist', name: 'javassist', version: '3.26.0-GA'
+    compile group: 'net.sourceforge.argparse4j', name: 'argparse4j', version: '0.8.1'
+
+    implementation 'com.github.frohoff:ysoserial:master-SNAPSHOT'
+    implementation 'com.github.BishopFox:GadgetProbe:master-SNAPSHOT'
+}
