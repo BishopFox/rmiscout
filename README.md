@@ -51,7 +51,7 @@ Read a [full technical writeup here](https://know.bishopfox.com/research/rmiscou
 
 ```
 # Perform wordlist-attack against remote RMI service using wordlist of function prototypes
-./rmiscout.sh wordlist -i prototypes.txt <host> <port>
+./rmiscout.sh wordlist -i lists/prototypes.txt <host> <port>
 
 # Bruteforce using method wordlist and other options
 ./rmiscout.sh bruteforce -i lists/methods.txt -r void,boolean,long -p String,int -l 1,4 <host> <port>
@@ -68,7 +68,7 @@ Read a [full technical writeup here](https://know.bishopfox.com/research/rmiscou
 
 Use the included `rmiscout.sh` script to automatically build the project and as a convenient wrapper around `java -jar` syntax:
 ```bash
-./rmiscout.sh wordlist -i prototypes.txt <host> <port>
+./rmiscout.sh wordlist -i lists/prototypes.txt <host> <port>
 ```
 
 Alternatively, build the project manually and use traditional `java -jar` syntax:
@@ -77,7 +77,7 @@ Alternatively, build the project manually and use traditional `java -jar` syntax
 # Manually build JAR
 ./gradlew shadowJar
 
-java -jar build/libs/rmiscout-1.0-SNAPSHOT-all.jar wordlist -i prototypes.txt <host> <port>
+java -jar build/libs/rmiscout-1.0-SNAPSHOT-all.jar wordlist -i lists/prototypes.txt <host> <port>
 ```
 
 

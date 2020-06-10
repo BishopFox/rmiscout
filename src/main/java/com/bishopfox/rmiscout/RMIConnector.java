@@ -76,13 +76,27 @@ public class RMIConnector {
 
             // For each registry create interface bound with test methods
             for (String regName : regNames) {
-                CtClass nInterface = defaultClassPool.makeInterface(regName, remoteInterface);
+
+                // Get remote interface name from exception
+                String interfaceName = "";
+                try {
+                    registry.lookup(regName);
+                } catch (UnmarshalException e) {
+                    if (e.detail instanceof ClassNotFoundException) {
+                        interfaceName = e.detail.getMessage().split(" ")[0];
+                    } else {
+                        System.err.println("Error retrieving remote interface className for name '" + regName + "'");
+                        System.exit(1);
+                    }
+                }
+
+                CtClass nInterface = defaultClassPool.makeInterface(interfaceName, remoteInterface);
                 generateStubs(nInterface, signatures);
 
                 originalClassLoader = Thread.currentThread().getContextClassLoader();
 
                 Thread.currentThread().setContextClassLoader(customClassLoader);
-                this.remoteRefs.put(regName, registry.lookup(regName));
+                this.remoteRefs.put(interfaceName, registry.lookup(regName));
             }
 
         } catch (RemoteException e) {
