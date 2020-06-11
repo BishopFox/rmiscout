@@ -90,11 +90,14 @@ public class RMIScout {
 
         wordlistMode.addArgument("-i", "--input").type(File.class).required(true).help("Wordlist of function prototypes");
         wordlistMode.addArgument("--allow-unsafe").setDefault(false).action(Arguments.storeTrue()).help("Allow execution of void function guesses.");
+        wordlistMode.addArgument("--activation-server").setDefault(false).action(Arguments.storeTrue()).help("Support for deprecated RMI Activation Systems");
         wordlistMode.addArgument("-n", "--registry-name").help(registryHelp);
         wordlistMode.addArgument("host").help(hostHelp);
         wordlistMode.addArgument("port").type(Integer.class).help(portHelp);
 
         bruteforceMode.addArgument("-i", "--input").type(File.class).required(true).help("Wordlist of candidate method names");
+        bruteforceMode.addArgument("--allow-unsafe").setDefault(false).action(Arguments.storeTrue()).help("Allow execution of void function guesses.");
+        bruteforceMode.addArgument("--activation-server").setDefault(false).action(Arguments.storeTrue()).help("Support for deprecated RMI Activation Systems");
         bruteforceMode.addArgument("-r", "--return-types").required(true).help("Set of candidate return types");
         bruteforceMode.addArgument("-p", "--parameter-types").required(true).help("Set of candidate parameter types");
         bruteforceMode.addArgument("-l", "--parameter-length").required(true).help("Candidate parameter length range expressed as a comma-delimited range EX: 1,4");
@@ -128,7 +131,7 @@ public class RMIScout {
                     // Split by types
                     HashMap<String, ArrayList<String>> sigMap = readFileToMap(ns.get("input"));
                     for (Map.Entry<String, ArrayList<String>> entry : sigMap.entrySet()) {
-                        process(ns.get("host"), ns.get("port"), ns.get("registry_name"), entry.getValue(), ns.get("allow_unsafe"));
+                        process(ns.get("host"), ns.get("port"), ns.get("registry_name"), entry.getValue(), ns.get("allow_unsafe"), ns.get("activation_server"));
                     }
                     break;
                 case "bruteforce":
@@ -150,7 +153,7 @@ public class RMIScout {
                     // Java Interfaces disallow different return types for otherwise identical prototypes
                     for (int i = 0; i < returnTypes.length; i++) {
                         signatures = generateMethods(ns.get("input"), returnTypes[i], paramRange, paramTypes);
-                        process(ns.get("host"), ns.get("port"), ns.get("registry_name"), signatures, false);
+                        process(ns.get("host"), ns.get("port"), ns.get("registry_name"), signatures, ns.get("allow_unsafe"), ns.get("activation_server"));
                     }
                     break;
                 case "exploit":
@@ -158,7 +161,7 @@ public class RMIScout {
                     signatures = new ArrayList<>();
                     signatures.add(ns.get("signature"));
 
-                    rmisearch = new RMIConnector(ns.get("host"), ns.get("port"), ns.get("registry_name"), signatures, false);
+                    rmisearch = new RMIConnector(ns.get("host"), ns.get("port"), ns.get("registry_name"), signatures, false, ns.get("activation_server"));
                     rmisearch.exploit(ns.get("payload"), ns.get("command"));
                     rmisearch.cleanup();
                     break;
@@ -171,7 +174,7 @@ public class RMIScout {
                     GadgetProbe gp = new GadgetProbe(ns.get("dns_endpoint"));
                     List<String> classnames = readFileToList(ns.get("input"));
 
-                    rmisearch = new RMIConnector(ns.get("host"), ns.get("port"), ns.get("registry_name"), signatures, false);
+                    rmisearch = new RMIConnector(ns.get("host"), ns.get("port"), ns.get("registry_name"), signatures, false,  ns.get("activation_server"));
                     for (String classname : classnames) {
                         rmisearch.execute(gp.getObject(classname));
                     }
@@ -184,13 +187,13 @@ public class RMIScout {
         }
     }
 
-    private static void process(String host, int port, String registryName, List<String> signatures, boolean allowUnsafe) {
+    private static void process(String host, int port, String registryName, List<String> signatures, boolean allowUnsafe, boolean isActivationServer) {
         // Perform batches of 1,000 dynamic methods to not exceed codesize limit of Proxy interface
         final int batch_size = 1000;
         for (int i = 0; i < (signatures.size()/batch_size)+1; i++) {
             int lower = i*batch_size;
             int upper = Integer.min(signatures.size(), (i+1)*batch_size);
-            RMIConnector rmisearch = new RMIConnector(host, port, registryName, signatures.subList(lower, upper), allowUnsafe);
+            RMIConnector rmisearch = new RMIConnector(host, port, registryName, signatures.subList(lower, upper), allowUnsafe, isActivationServer);
             rmisearch.checkIfPresent();
             rmisearch.cleanup();
         }

