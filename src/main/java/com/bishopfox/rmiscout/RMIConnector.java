@@ -1,16 +1,21 @@
 package com.bishopfox.rmiscout;
 
 import javassist.*;
-import javassist.Modifier;
 import javassist.bytecode.DuplicateMemberException;
 import sun.misc.Unsafe;
 import ysoserial.payloads.ObjectPayload;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.rmi.*;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.server.*;
+import java.rmi.server.RemoteObject;
+import java.rmi.server.RemoteObjectInvocationHandler;
+import java.rmi.server.RemoteRef;
+import java.rmi.server.RemoteStub;
 import java.security.SecureRandom;
 import java.util.*;
 
@@ -49,13 +54,26 @@ public class RMIConnector {
         }
     }
 
+
+
     @SuppressWarnings("unchecked")
     public RMIConnector(String host, int port, String remoteName, List<String> signatures, boolean allowUnsafe, boolean isActivationServer) {
         try {
             this.allowUnsafe = allowUnsafe;
             this.isActivationServer = isActivationServer;
+            String[] regNames = null;
 
-            this.registry = LocateRegistry.getRegistry(host, port);
+            try {
+                // Attempt a standard cleartext connection
+                this.registry = LocateRegistry.getRegistry(host, port);
+                regNames = registry.list();
+            } catch (ConnectIOException ce) {
+                // Fallback to an insecure (all-trust) SSL Connection
+                this.registry = LocateRegistry.getRegistry(host, port, new RMISSLClientSocketFactory());
+                regNames = registry.list();
+            }
+
+
             this.remoteRefs = new HashMap<>();
 
             // Switch to custom classloader
@@ -68,13 +86,10 @@ public class RMIConnector {
 
             generateDummyClass(defaultClassPool);
             CtClass remoteInterface = defaultClassPool.getCtClass(Remote.class.getName());
-            String[] regNames;
 
             // If remoteName is not specificied create a list of all remotes
             if (remoteName != null) {
                 regNames = new String[]{remoteName};
-            } else {
-                regNames = registry.list();
             }
 
             // For each registry create interface bound with test methods
@@ -93,9 +108,11 @@ public class RMIConnector {
                     }
                 }
 
-                String stubName = "";
+                String stubName = "DefaultStub";
                 if (isActivationServer) {
-                    stubName = interfaceName;
+                    if (!interfaceName.isEmpty()) {
+                        stubName = interfaceName;
+                    }
                     interfaceName = "ActivationStub";
                 }
 
@@ -124,7 +141,10 @@ public class RMIConnector {
                 originalClassLoader = Thread.currentThread().getContextClassLoader();
 
                 Thread.currentThread().setContextClassLoader(customClassLoader);
+
                 this.remoteRefs.put(interfaceName, registry.lookup(regName));
+
+
             }
 
         } catch (RemoteException e) {
@@ -163,6 +183,7 @@ public class RMIConnector {
                     System.out.println("Duplicate prototype: " + newmethod);
                 }
             }
+
             ctclass.toClass(customClassLoader);
         } catch (CannotCompileException ce ) {
             if (ce.getReason().contains(ctclass.getSimpleName())) {

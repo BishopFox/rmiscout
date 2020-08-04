@@ -1,12 +1,17 @@
+package com.bishopfox.example;
+
 import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.RemoteException;
+import java.rmi.RMISecurityManager;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
+import javax.rmi.ssl.SslRMIClientSocketFactory;
+import javax.rmi.ssl.SslRMIServerSocketFactory;
 
-public class Server implements Hello {
+public class SSLServer implements Hello {
 
-    public Server() {}
+    public SSLServer() {}
 
     public String sayHello() { return "Remote Executed!"; }
     public String restart()  { return "Remote Executed!"; }
@@ -28,13 +33,22 @@ public class Server implements Hello {
     public ArrayList<String> say2things(String name, int test)  { return new ArrayList<String>(); }
 
     public static void main(String args[]) {
+                // Create and install a security manager
+        if (System.getSecurityManager() == null) {
+            System.setSecurityManager(new RMISecurityManager());
+        }
 
         try {
             Server obj = new Server();
             Hello stub = (Hello) UnicastRemoteObject.exportObject(obj, 0);
 
-            Registry registry = LocateRegistry.getRegistry();
-            registry.bind("Hello", stub);
+            //Registry registry = LocateRegistry.getRegistry();
+
+            // Create SSL-based registry
+            Registry registry = LocateRegistry.createRegistry(1099,
+                new SslRMIClientSocketFactory(),
+                new SslRMIServerSocketFactory());
+            registry.bind("thisisatest", stub);
 
             System.err.println("Server ready");
         } catch (Exception e) {
