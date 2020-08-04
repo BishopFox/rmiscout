@@ -77,7 +77,7 @@ Alternatively, build the project manually and use traditional `java -jar` syntax
 # Manually build JAR
 ./gradlew shadowJar
 
-java -jar build/libs/rmiscout-1.01-SNAPSHOT-all.jar wordlist -i lists/prototypes.txt <host> <port>
+java -jar build/libs/rmiscout-1.02-SNAPSHOT-all.jar wordlist -i lists/prototypes.txt <host> <port>
 ```
 
 
