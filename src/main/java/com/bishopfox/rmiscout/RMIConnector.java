@@ -176,7 +176,7 @@ public class RMIConnector {
                 boolean wasModified = false;
 
                 // Check for dummy params
-                if(!sig.matches(".*[\\w\\.\\$]+\\s+\\w+\\s*,.*")) {
+                if(sig.matches("^.*\\(\\w[^\\s]*\\).*")) {
                     System.out.println("[INFO] Adding missing dummy parameter names to signature");
                     sig = sig.replace(",", " a,");
                     sig = sig.replace(")", " a)");
