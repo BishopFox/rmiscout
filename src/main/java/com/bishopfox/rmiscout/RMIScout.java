@@ -109,6 +109,7 @@ public class RMIScout {
         exploitMode.addArgument("-p", "--payload").required(true).help("Fully-qualified name of payload implementing ObjectPayload<Object>. EX: ysoserial.payloads.URLDNS");
         exploitMode.addArgument("-c", "--command").required(true).help("Command String corresponding to payload");
         exploitMode.addArgument("-n", "--registry-name").help(registryHelp);
+        exploitMode.addArgument("--activation-server").setDefault(false).action(Arguments.storeTrue()).help("Support for deprecated RMI Activation Systems");
         exploitMode.addArgument("host").help(hostHelp);
         exploitMode.addArgument("port").type(Integer.class).help(portHelp);
 
@@ -116,6 +117,7 @@ public class RMIScout {
         probeMode.addArgument("-s", "--signature").required(true).help("String representing remote target method signature");
         probeMode.addArgument("-d", "--dns-endpoint").required(true).help("DNS listener domain");
         probeMode.addArgument("-n", "--registry-name").help(registryHelp);
+        probeMode.addArgument("--activation-server").setDefault(false).action(Arguments.storeTrue()).help("Support for deprecated RMI Activation Systems");
         probeMode.addArgument("host").help(hostHelp);
         probeMode.addArgument("port").type(Integer.class).help(portHelp);
 

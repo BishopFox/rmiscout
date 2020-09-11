@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'com.bishopfox.rmiscout'
-version '1.02-SNAPSHOT'
+version '1.03-SNAPSHOT'
 
 mainClassName = 'com.bishopfox.rmiscout.RMIScout'
 
