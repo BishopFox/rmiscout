@@ -6,7 +6,7 @@ import java.util.*;
 
 public interface Hello extends Remote {
     String restart() throws RemoteException;
-    String sayHello(String name) throws RemoteException;
+    String sayHello(String name, List test) throws RemoteException;
     String sayNumber(int name) throws RemoteException;
     boolean login(String email, String password) throws RemoteException;
 
