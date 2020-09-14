@@ -13,7 +13,7 @@ public class Server implements Hello {
     public String sayHello() { return "Remote Executed!"; }
     public String restart()  { return "Remote Executed!"; }
     public boolean login(String email, String password) { return true; }
-    public String sayHello(String name)  { return "Remote Executed!"; }
+    public String sayHello(String name, List test)  { return "Remote Executed!"; }
     public String sayNumber(int name)  { return "Remote Executed!"; }
     public String sayTest1(int name)  { return "Remote Executed!"; }
     public String sayTest2(byte name)  { return "Remote Executed!"; }

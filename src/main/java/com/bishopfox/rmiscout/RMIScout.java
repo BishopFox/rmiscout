@@ -178,7 +178,7 @@ public class RMIScout {
 
                     rmisearch = new RMIConnector(ns.get("host"), ns.get("port"), ns.get("registry_name"), signatures, false,  ns.get("activation_server"));
                     for (String classname : classnames) {
-                        rmisearch.execute(gp.getObject(classname));
+                        rmisearch.execute(gp.getObject(classname), false);
                     }
                     break;
             }
