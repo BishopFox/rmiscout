@@ -17,6 +17,7 @@ repositories {
     mavenCentral()
     maven { url "https://jitpack.io" }
     maven { url "https://repo.spring.io/plugins-release/" }
+    maven { url "https://repo.jenkins-ci.org/releases/" }
 }
 
 dependencies {
