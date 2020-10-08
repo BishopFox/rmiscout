@@ -3,15 +3,12 @@ package com.bishopfox.example;
 import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.RemoteException;
-import java.rmi.RMISecurityManager;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
-import javax.rmi.ssl.SslRMIClientSocketFactory;
-import javax.rmi.ssl.SslRMIServerSocketFactory;
 
-public class SSLServer implements HelloInterface {
+public class PlainServer implements HelloInterface {
 
-    public SSLServer() {}
+    public PlainServer() {}
 
     /** START TESTS **/
     // void function
@@ -86,26 +83,17 @@ public class SSLServer implements HelloInterface {
     /** END TESTS **/
 
     public static void main(String args[]) {
-                // Create and install a security manager
-        if (System.getSecurityManager() == null) {
-            System.setSecurityManager(new RMISecurityManager());
-        }
 
         try {
-            SSLServer obj = new SSLServer();
-            HelloInterface stub = (HelloInterface) UnicastRemoteObject.exportObject(obj, 0);
+            PlainServer obj = new PlainServer();
+            HelloInterface stub = (HelloInterface) UnicastRemoteObject.exportObject(obj, 1111);
 
-            //Registry registry = LocateRegistry.getRegistry();
+            Registry registry = LocateRegistry.getRegistry();
+            registry.bind("plaintest", stub);
 
-            // Create SSL-based registry
-            Registry registry = LocateRegistry.createRegistry(1100,
-                new SslRMIClientSocketFactory(),
-                new SslRMIServerSocketFactory());
-            registry.bind("ssltest", stub);
-
-            System.err.println("SSL Server ready on port 1100...");
+            System.err.println("Plain Server ready on port 1099...");
         } catch (Exception e) {
-            System.err.println("SSL Server exception: " + e.toString());
+            System.err.println("Plain Server exception: " + e.toString());
             e.printStackTrace();
         }
     }

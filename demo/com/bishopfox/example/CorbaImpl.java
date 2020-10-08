@@ -1,17 +1,12 @@
 package com.bishopfox.example;
 
-import java.rmi.registry.Registry;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.RemoteException;
-import java.rmi.RMISecurityManager;
-import java.rmi.server.UnicastRemoteObject;
+import javax.rmi.PortableRemoteObject;
 import java.util.*;
-import javax.rmi.ssl.SslRMIClientSocketFactory;
-import javax.rmi.ssl.SslRMIServerSocketFactory;
 
-public class SSLServer implements HelloInterface {
-
-    public SSLServer() {}
+public class CorbaImpl extends PortableRemoteObject implements HelloInterface {
+   public CorbaImpl() throws java.rmi.RemoteException {
+       super();     // invoke rmi linking and remote object initialization
+   }
 
     /** START TESTS **/
     // void function
@@ -85,28 +80,4 @@ public class SSLServer implements HelloInterface {
     public void sayTest24(String a)  {}
     /** END TESTS **/
 
-    public static void main(String args[]) {
-                // Create and install a security manager
-        if (System.getSecurityManager() == null) {
-            System.setSecurityManager(new RMISecurityManager());
-        }
-
-        try {
-            SSLServer obj = new SSLServer();
-            HelloInterface stub = (HelloInterface) UnicastRemoteObject.exportObject(obj, 0);
-
-            //Registry registry = LocateRegistry.getRegistry();
-
-            // Create SSL-based registry
-            Registry registry = LocateRegistry.createRegistry(1100,
-                new SslRMIClientSocketFactory(),
-                new SslRMIServerSocketFactory());
-            registry.bind("ssltest", stub);
-
-            System.err.println("SSL Server ready on port 1100...");
-        } catch (Exception e) {
-            System.err.println("SSL Server exception: " + e.toString());
-            e.printStackTrace();
-        }
-    }
 }

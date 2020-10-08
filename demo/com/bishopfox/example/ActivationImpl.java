@@ -1,17 +1,21 @@
 package com.bishopfox.example;
 
-import java.rmi.registry.Registry;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.RemoteException;
-import java.rmi.RMISecurityManager;
-import java.rmi.server.UnicastRemoteObject;
+import java.rmi.*;
+import java.rmi.activation.*;
 import java.util.*;
-import javax.rmi.ssl.SslRMIClientSocketFactory;
-import javax.rmi.ssl.SslRMIServerSocketFactory;
 
-public class SSLServer implements HelloInterface {
+public class ActivationImpl implements HelloInterface {
 
-    public SSLServer() {}
+    private String result = null;
+
+    // The constructor for activation and export; this constructor is
+    // called by the method ActivationInstantiator.newInstance during
+    // activation, to construct the object.
+    //
+    public ActivationImpl(ActivationID id, MarshalledObject data) throws RemoteException {
+    	// Register the object with the activation system then export it on an anonymous port
+    	Activatable.exportObject(this, id, 0);
+    }
 
     /** START TESTS **/
     // void function
@@ -85,28 +89,4 @@ public class SSLServer implements HelloInterface {
     public void sayTest24(String a)  {}
     /** END TESTS **/
 
-    public static void main(String args[]) {
-                // Create and install a security manager
-        if (System.getSecurityManager() == null) {
-            System.setSecurityManager(new RMISecurityManager());
-        }
-
-        try {
-            SSLServer obj = new SSLServer();
-            HelloInterface stub = (HelloInterface) UnicastRemoteObject.exportObject(obj, 0);
-
-            //Registry registry = LocateRegistry.getRegistry();
-
-            // Create SSL-based registry
-            Registry registry = LocateRegistry.createRegistry(1100,
-                new SslRMIClientSocketFactory(),
-                new SslRMIServerSocketFactory());
-            registry.bind("ssltest", stub);
-
-            System.err.println("SSL Server ready on port 1100...");
-        } catch (Exception e) {
-            System.err.println("SSL Server exception: " + e.toString());
-            e.printStackTrace();
-        }
-    }
 }
