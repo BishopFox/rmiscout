@@ -4,9 +4,15 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '2.0.4'
 }
 
-group 'com.bishopfox.rmiscout'
-version '1.03.2-SNAPSHOT'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
+if(JavaVersion.current() != JavaVersion.VERSION_1_8){
+    throw new GradleException("The java version used ${JavaVersion.current()} is not the expected version ${project.targetCompatibility}.")
+}
+
+group 'com.bishopfox.rmiscout'
+version '1.4-SNAPSHOT'
 mainClassName = 'com.bishopfox.rmiscout.RMIScout'
 
 tasks.withType(JavaCompile) {
@@ -17,7 +23,7 @@ repositories {
     mavenCentral()
     maven { url "https://jitpack.io" }
     maven { url "https://repo.spring.io/plugins-release/" }
-    maven { url "https://repo.jenkins-ci.org/releases/" }
+    maven { url "https://repo.jenkins-ci.org/public/" }
 }
 
 dependencies {

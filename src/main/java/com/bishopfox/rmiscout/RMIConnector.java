@@ -356,6 +356,7 @@ public class RMIConnector implements Connector {
                     // Bypass internal call flow for custom params
                     RemoteRef ref = null;
                     if (interfaceName.endsWith("_Stub_Interface")) {
+                        isActivationServer = true;
                         Field f = RemoteObject.class.getDeclaredField("ref");
                         f.setAccessible(true);
                         ref = (RemoteRef) f.get(stub);
