@@ -1,12 +1,13 @@
 package com.bishopfox.rmiscout;
 
-import java.io.*;
-import java.net.*;
-import java.rmi.server.*;
+import javax.net.ssl.*;
+import java.io.IOException;
+import java.io.Serializable;
+import java.net.Socket;
+import java.rmi.server.RMIClientSocketFactory;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
-import javax.net.ssl.*;
 
 public class RMISSLClientSocketFactory implements RMIClientSocketFactory, Serializable {
 
